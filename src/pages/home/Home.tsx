@@ -1,72 +1,92 @@
+// app/page.tsx
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import React from "react";
+import { useUser } from "@/context/UserContext";
+import Header from "@/layout/header/Header";
+import { v4 as uuidv4 } from "uuid"; // To generate random IDs
 
-const HomePage = () => {
-  const [meetingId, setMeetingId] = useState(""); // Store the Meeting ID
-  const [isMeetingCreated, setIsMeetingCreated] = useState(false); // Track if meeting is created
+export default function Home() {
   const router = useRouter();
+  const { user } = useUser(); // Access the user data from context
 
-  // Handle the Join Meeting button click
-  const handleJoinMeeting = () => {
-    if (meetingId) {
-      router.push(`/meeting?meetingId=${meetingId}`); // Pass meetingId as a query parameter
-    } else {
-      alert("Please enter a Meeting ID!");
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const target = e.target as typeof e.target & {
+      channel: { value: string };
+    };
+    const channelName = target.channel.value;
+
+    if (channelName && user?.sub) {
+      // Pass the user.sub as part of the query string
+      router.push(`/channel/${channelName}`);
     }
   };
 
-  // Handle Create Meeting button click
-  const handleCreateMeeting = () => {
-    // Generate a random 6-digit Meeting ID
-    const generatedId = Math.floor(Math.random() * 1000000).toString();
-    setMeetingId(generatedId); // Set the generated Meeting ID
-    setIsMeetingCreated(true); // Mark that the meeting has been created
+  const startNewMeeting = () => {
+    // Generate a random channel name and redirect to it
+    const randomChannel = uuidv4(); // Use UUID to generate a random meeting ID
+    router.push(`/channel/${randomChannel}`);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <h1 className="text-3xl font-semibold mb-4">Welcome to the Video Meeting</h1>
+    <>
+      <Header />
+      <div className="md:flex justify-center items-center mt-20 px-4 md:px-0">
+        {/* Main content */}
+        <div className="w-full md:w-2/3 lg:w-1/2 text-center">
+          {user ? (
+            <h1 className="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900">
+              Welcome, <span className="text-blue-500">{user.name}</span>
+            </h1>
+          ) : (
+            <h1 className="mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900">
+              Welcome to the platform
+            </h1>
+          )}
 
-      {isMeetingCreated ? (
-        <div className="mb-4">
-          <p className="text-lg">Your Meeting ID: {meetingId}</p>
-          <button
-            onClick={() => setIsMeetingCreated(false)}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-          >
-            Create Another Meeting
-          </button>
+          <p className="text-2xl md:text-3xl lg:text-4xl mb-6 text-blue-600">
+            Video Calls and Meetings for Everyone
+          </p>
+
+          <form onSubmit={handleSubmit} className="w-full max-w-lg mx-auto">
+            <div className="flex flex-col md:flex-row gap-4 mt-6 justify-center items-center">
+              {/* New Meeting Button */}
+              <button
+                onClick={startNewMeeting}
+                className="inline-flex items-center justify-center w-52 p-1 h-12 text-base font-medium text-center text-white bg-green-500 rounded-lg hover:bg-green-600 focus:ring-4 focus:ring-green-300 dark:focus:ring-green-900"
+              >
+                New Meeting
+              </button>
+              
+              <input
+                className="bg-gray-200 appearance-none border-2 border-gray-200 rounded py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-blue-500 h-12 w-full"
+                id="channel"
+                type="text"
+                name="channel"
+                placeholder="Enter meeting ID"
+                required
+              />
+              <button
+                className="inline-flex items-center justify-center px-5 h-12 text-base font-medium text-center text-white bg-blue-400 rounded-lg hover:bg-blue-500 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900"
+                type="submit"
+              >
+                JOIN
+              </button>
+            </div>
+          </form>
         </div>
-      ) : (
-        <div className="mb-4">
-          <input
-            type="text"
-            className="border p-2 rounded"
-            placeholder="Enter Meeting ID"
-            value={meetingId}
-            onChange={(e) => setMeetingId(e.target.value)}
+
+        {/* Right image */}
+        <div className="hidden md:block md:w-1/3 lg:w-1/4">
+          <img
+            src="https://static.vecteezy.com/system/resources/previews/015/682/759/non_2x/business-meeting-icon-color-outline-vector.jpg"
+            alt="Right Image"
+            className="object-cover w-full h-full"
           />
         </div>
-      )}
-
-      <div className="flex gap-4">
-        <button
-          onClick={handleJoinMeeting}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-        >
-          Join Meeting
-        </button>
-        <button
-          onClick={handleCreateMeeting}
-          className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-        >
-          Create Meeting
-        </button>
       </div>
-    </div>
+    </>
   );
-};
-
-export default HomePage;
+}
