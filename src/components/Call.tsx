@@ -69,11 +69,23 @@ function Videos(props: {
     );
   }
 
-  console.log("Local Camera Track Enabled:", localCameraTrack?.enabled);
+  const unit = "minmax(0, 1fr) ";
 
   return (
     <div className="flex flex-col justify-between w-full h-screen p-1">
-      <div className={`grid gap-1 flex-1`}>
+      <div
+        className={`grid gap-1 flex-1`}
+        style={{
+          gridTemplateColumns:
+            remoteUsers.length > 9
+              ? unit.repeat(4)
+              : remoteUsers.length > 4
+              ? unit.repeat(3)
+              : remoteUsers.length > 1
+              ? unit.repeat(2)
+              : unit,
+        }}
+      >
         <LocalVideoTrack
           track={localCameraTrack}
           play={true}
@@ -95,12 +107,10 @@ function ToggleButtons() {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
 
   const toggleAudio = async () => {
-    console.log("Current audio track:", localMicrophoneTrack);
     if (localMicrophoneTrack) {
       try {
-        await localMicrophoneTrack.setEnabled(!isAudioEnabled);
-        setIsAudioEnabled((prev) => !prev);
-        console.log("Audio toggled to:", !isAudioEnabled);
+        await localMicrophoneTrack.setEnabled(!isAudioEnabled); // Toggle audio
+        setIsAudioEnabled(!isAudioEnabled);
       } catch (error) {
         console.error("Failed to toggle audio:", error);
       }
@@ -108,14 +118,12 @@ function ToggleButtons() {
       console.warn("Local microphone track not initialized.");
     }
   };
-  
+
   const toggleVideo = async () => {
-    console.log("Current video track:", localCameraTrack);
     if (localCameraTrack) {
       try {
-        await localCameraTrack.setEnabled(!isVideoEnabled);
-        setIsVideoEnabled((prev) => !prev);
-        console.log("Video toggled to:", !isVideoEnabled);
+        await localCameraTrack.setEnabled(!isVideoEnabled); // Toggle video
+        setIsVideoEnabled(!isVideoEnabled);
       } catch (error) {
         console.error("Failed to toggle video:", error);
       }
