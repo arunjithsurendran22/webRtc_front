@@ -1,161 +1,159 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState } from "react";
+import AgoraRTC from "agora-rtc-sdk-ng";
 
-import AgoraRTC, {
-  AgoraRTCProvider,
-  LocalVideoTrack,
-  RemoteUser,
-  useJoin,
-  useLocalCameraTrack,
-  useLocalMicrophoneTrack,
-  usePublish,
-  useRTCClient,
-  useRemoteAudioTracks,
-  useRemoteUsers,
-} from "agora-rtc-react";
-import { useState } from "react";
+type AgoraCallProps = {
+  AppId: string;
+  ChannelName: string;
+  RtcToken: string;
+};
 
-function Call(props: { appId: string; channelName: string; rtcToken: string }) {
-  const { appId, channelName, rtcToken } = props;
-
-  const client = useRTCClient(
-    AgoraRTC.createClient({ codec: "vp8", mode: "rtc" })
-  );
-
-  return (
-    <AgoraRTCProvider client={client}>
-      <Videos channelName={channelName} AppID={appId} rtcToken={rtcToken} />
-      <div className="fixed z-10 bottom-0 left-0 right-0 flex justify-center pb-4 space-x-4">
-        <ToggleButtons />
-        <a
-          className="px-5 py-3 text-base font-medium text-center text-white bg-red-400 rounded-lg hover:bg-red-500 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900 w-40"
-          href="/"
-        >
-          End Call
-        </a>
-      </div>
-    </AgoraRTCProvider>
-  );
-}
-
-function Videos(props: {
-  channelName: string;
-  AppID: string;
-  rtcToken: string;
-}) {
-  const { AppID, channelName, rtcToken } = props;
-
-  const { isLoading: isLoadingMic, localMicrophoneTrack } =
-    useLocalMicrophoneTrack();
-  const { isLoading: isLoadingCam, localCameraTrack } = useLocalCameraTrack();
-  const remoteUsers = useRemoteUsers();
-  const { audioTracks } = useRemoteAudioTracks(remoteUsers);
-
-  usePublish([localMicrophoneTrack, localCameraTrack]);
-
-  // Join the channel with the token
-  useJoin({
-    appid: AppID,
-    channel: channelName,
-    token: rtcToken,
-  });
-
-  // Play remote audio tracks
-  audioTracks.map((track) => track.play());
-  const deviceLoading = isLoadingMic || isLoadingCam;
-
-  if (deviceLoading) {
-    return (
-      <div className="flex flex-col items-center pt-40">Loading devices...</div>
-    );
-  }
-
-  const unit = "minmax(0, 1fr) ";
-
-  return (
-    <div className="flex flex-col justify-between w-full h-screen p-1">
-      <div
-        className={`grid gap-1 flex-1`}
-        style={{
-          gridTemplateColumns:
-            remoteUsers.length > 9
-              ? unit.repeat(4)
-              : remoteUsers.length > 4
-              ? unit.repeat(3)
-              : remoteUsers.length > 1
-              ? unit.repeat(2)
-              : unit,
-        }}
-      >
-        <LocalVideoTrack
-          track={localCameraTrack}
-          play={true}
-          className="w-full h-full"
-        />
-        {remoteUsers.map((user) => (
-          <RemoteUser key={user.uid} user={user} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ToggleButtons() {
-  const { localCameraTrack } = useLocalCameraTrack();
-  const { localMicrophoneTrack } = useLocalMicrophoneTrack();
-
+const AgoraCall: React.FC<AgoraCallProps> = ({
+  AppId,
+  ChannelName,
+  RtcToken,
+}) => {
+  const [isJoined, setIsJoined] = useState(false);
+  const [audioTrack, setAudioTrack] = useState<any>(null);
+  const [videoTrack, setVideoTrack] = useState<any>(null);
+  const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [agoraClient, setAgoraClient] = useState<any>(null);
 
-  const toggleAudio = async () => {
-    if (localMicrophoneTrack) {
-      try {
-        await localMicrophoneTrack.setEnabled(!isAudioEnabled); // Toggle audio
-        setIsAudioEnabled(!isAudioEnabled);
-      } catch (error) {
-        console.error("Failed to toggle audio:", error);
-      }
-    } else {
-      console.warn("Local microphone track not initialized.");
+  const appId = AppId;
+  const channelName = ChannelName;
+  const token = RtcToken;
+  const uid = Math.floor(Math.random() * 100000);
+
+  const joinChannel = async () => {
+    if (isJoined) return;
+
+    try {
+      const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+      setAgoraClient(client);
+
+      client.on("user-published", async (user: any, mediaType: any) => {
+        await client.subscribe(user, mediaType);
+        console.log("Subscribed to user:", user.uid);
+
+        if (mediaType === "video") {
+          const remoteVideoContainer = document.getElementById("remote-video");
+          user.videoTrack?.play(remoteVideoContainer);
+        }
+        if (mediaType === "audio") {
+          user.audioTrack?.play();
+        }
+      });
+
+      client.on("user-unpublished", (user: any) => {
+        console.log("User unpublished:", user.uid);
+      });
+
+      // Join the channel
+      await client.join(appId, channelName, token, uid);
+
+      // Create and publish local tracks
+      const micTrack: any = await AgoraRTC.createMicrophoneAudioTrack();
+      const camTrack: any = await AgoraRTC.createCameraVideoTrack();
+
+      await client.publish([micTrack, camTrack]);
+
+      // Play local video
+      const localVideoContainer = document.getElementById("local-video");
+      camTrack.play(localVideoContainer);
+
+      setAudioTrack(micTrack);
+      setVideoTrack(camTrack);
+      setIsJoined(true);
+
+      console.log("Joined the channel and published tracks.");
+    } catch (error: any) {
+      console.error("Failed to join the channel:", error);
     }
   };
 
-  const toggleVideo = async () => {
-    if (localCameraTrack) {
-      try {
-        await localCameraTrack.setEnabled(!isVideoEnabled); // Toggle video
-        setIsVideoEnabled(!isVideoEnabled);
-      } catch (error) {
-        console.error("Failed to toggle video:", error);
-      }
-    } else {
-      console.warn("Local camera track not initialized.");
+  const leaveChannel = async () => {
+    if (!isJoined || !agoraClient) return;
+    try {
+      audioTrack?.stop();
+      audioTrack?.close();
+      videoTrack?.stop();
+      videoTrack?.close();
+
+      await agoraClient.leave();
+      setIsJoined(false);
+      setRemoteUsers([]);
+      console.log("Left the channel.");
+    } catch (error: any) {
+      console.error("Failed to leave the channel:", error);
+    }
+  };
+
+  const toggleAudio = () => {
+    if (audioTrack) {
+      audioTrack.setEnabled(!isAudioEnabled);
+      setIsAudioEnabled(!isAudioEnabled);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (videoTrack) {
+      videoTrack.setEnabled(!isVideoEnabled);
+      setIsVideoEnabled(!isVideoEnabled);
     }
   };
 
   return (
-    <div className="flex space-x-4">
-      {/* Audio Toggle */}
-      <div className="flex items-center space-x-2">
-        <label className="font-medium text-gray-700">Audio</label>
-        <input
-          type="checkbox"
-          checked={isAudioEnabled}
-          onChange={toggleAudio}
-          className="toggle-switch"
-        />
+    <div style={{ textAlign: "center" }}>
+      <h1>Agora Audio/Video Call</h1>
+      <div>
+        <button
+          onClick={joinChannel}
+          disabled={isJoined}
+          style={{ margin: "10px", padding: "10px" }}
+        >
+          Join Call
+        </button>
+        <button
+          onClick={leaveChannel}
+          disabled={!isJoined}
+          style={{ margin: "10px", padding: "10px" }}
+        >
+          Leave Call
+        </button>
+        <button
+          onClick={toggleAudio}
+          disabled={!isJoined}
+          style={{ margin: "10px", padding: "10px" }}
+        >
+          {isAudioEnabled ? "Disable Audio" : "Enable Audio"}
+        </button>
+        <button
+          onClick={toggleVideo}
+          disabled={!isJoined}
+          style={{ margin: "10px", padding: "10px" }}
+        >
+          {isVideoEnabled ? "Disable Video" : "Enable Video"}
+        </button>
       </div>
-      {/* Video Toggle */}
-      <div className="flex items-center space-x-2">
-        <label className="font-medium text-gray-700">Video</label>
-        <input
-          type="checkbox"
-          checked={isVideoEnabled}
-          onChange={toggleVideo}
-          className="toggle-switch"
-        />
+      <div>
+        <h2>Local Video</h2>
+        <div
+          id="local-video"
+          style={{ width: "320px", height: "240px", backgroundColor: "#000" }}
+        ></div>
+      </div>
+      <div>
+        <h2>Remote Video</h2>
+        <div
+          id="remote-video"
+          style={{ width: "320px", height: "240px", backgroundColor: "#000" }}
+        ></div>
       </div>
     </div>
   );
-}
+};
 
-export default Call;
+export default AgoraCall;

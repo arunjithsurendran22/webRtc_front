@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import AgoraRTC, { IAgoraRTCClient, IAgoraRTCRemoteUser } from "agora-rtc-react";
+import AgoraRTC, {
+  IAgoraRTCClient,
+  IAgoraRTCRemoteUser,
+} from "agora-rtc-react";
 
 interface MeetingRoomProps {
   roomId: string;
@@ -21,7 +24,8 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ roomId }) => {
     const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     setClient(client);
 
-    const [localAudioTrack, localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+    const [localAudioTrack, localVideoTrack] =
+      await AgoraRTC.createMicrophoneAndCameraTracks();
     setLocalTracks({ localAudioTrack, localVideoTrack });
 
     client.on("user-published", async (user: IAgoraRTCRemoteUser) => {
@@ -34,7 +38,12 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ roomId }) => {
       setUsers((prevUsers) => prevUsers.filter((u) => u.uid !== user.uid));
     });
 
-    await client.join(process.env.NEXT_PUBLIC_AGORA_APP_ID!, roomId, null, null);
+    await client.join(
+      process.env.NEXT_PUBLIC_AGORA_APP_ID!,
+      roomId,
+      null,
+      null
+    );
 
     // Play local video
     if (videoContainerRef.current) {
@@ -101,7 +110,10 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ roomId }) => {
       ) : (
         <div className="flex flex-col items-center">
           {/* Local Video */}
-          <div ref={videoContainerRef} className="border-2 mb-4 p-2 w-80 h-60 bg-black"></div>
+          <div
+            ref={videoContainerRef}
+            className="border-2 mb-4 p-2 w-80 h-60 bg-black"
+          ></div>
 
           {/* Remote Users */}
           <div className="flex flex-wrap gap-4 mb-6">
@@ -122,13 +134,17 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({ roomId }) => {
           <div className="flex gap-4 mb-4">
             <button
               onClick={toggleVideo}
-              className={`px-4 py-2 ${isVideoEnabled ? "bg-red-500" : "bg-green-500"} text-white rounded-lg`}
+              className={`px-4 py-2 ${
+                isVideoEnabled ? "bg-red-500" : "bg-green-500"
+              } text-white rounded-lg`}
             >
               {isVideoEnabled ? "Disable Video" : "Enable Video"}
             </button>
             <button
               onClick={toggleAudio}
-              className={`px-4 py-2 ${isAudioEnabled ? "bg-red-500" : "bg-green-500"} text-white rounded-lg`}
+              className={`px-4 py-2 ${
+                isAudioEnabled ? "bg-red-500" : "bg-green-500"
+              } text-white rounded-lg`}
             >
               {isAudioEnabled ? "Mute Audio" : "Unmute Audio"}
             </button>

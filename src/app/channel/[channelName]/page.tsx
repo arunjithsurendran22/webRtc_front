@@ -49,11 +49,7 @@ export default function Page() {
         {channelName}
       </p>
       {/* Pass the RTC token to the Call component */}
-      <Call
-        appId={APP_ID}
-        channelName={channelName}
-        rtcToken={rtcToken}
-      />
+      <Call AppId={APP_ID} ChannelName={channelName} RtcToken={rtcToken} />
     </main>
   );
 }
